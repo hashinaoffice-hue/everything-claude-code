@@ -7,7 +7,7 @@ export interface EyeConfig {
   readonly irisColor: THREE.Vector3;
 }
 
-const DEFAULT_IRIS_COLOR = new THREE.Vector3(0.55, 0.05, 0.15); // deep crimson-purple
+const DEFAULT_IRIS_COLOR = new THREE.Vector3(0.55, 0.05, 0.15);
 
 export class Eye {
   readonly mesh: THREE.Mesh;
@@ -26,6 +26,7 @@ export class Eye {
         uBlinkOffset: { value: blinkOffset },
         uIrisColor: { value: irisColor },
         uLookDirection: { value: new THREE.Vector2(0, 0) },
+        uActivation: { value: 0 },
       },
       transparent: true,
       side: THREE.FrontSide,
@@ -37,6 +38,10 @@ export class Eye {
 
   update(time: number): void {
     this.material.uniforms.uTime.value = time;
+  }
+
+  setActivation(value: number): void {
+    this.material.uniforms.uActivation.value = value;
   }
 
   setLookDirection(x: number, y: number): void {

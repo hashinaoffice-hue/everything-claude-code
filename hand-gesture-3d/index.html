@@ -14,40 +14,44 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0a0a0a;
+      background: #000;
       font-family: 'Segoe UI', sans-serif;
       color: #fff;
+      touch-action: none;
     }
     #app {
       width: 100%;
       height: 100%;
       position: relative;
     }
-    #three-canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
+    /* Full-screen camera background */
     #camera-feed {
       position: absolute;
-      bottom: 16px;
-      right: 16px;
-      width: 240px;
-      height: 180px;
-      border-radius: 8px;
-      border: 2px solid rgba(255, 50, 50, 0.4);
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       transform: scaleX(-1);
-      z-index: 10;
+      z-index: 0;
     }
+    /* Three.js canvas overlays on camera */
+    #three-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    /* Hand skeleton overlay */
     #hand-overlay {
       position: absolute;
-      bottom: 16px;
-      right: 16px;
-      width: 240px;
-      height: 180px;
-      border-radius: 8px;
-      z-index: 11;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
       pointer-events: none;
     }
     #loading {
@@ -59,13 +63,14 @@
       z-index: 100;
     }
     #loading h2 {
-      font-size: 1.5rem;
-      margin-bottom: 12px;
+      font-size: 1.8rem;
+      margin-bottom: 16px;
       color: #cc3333;
+      text-shadow: 0 0 20px rgba(204, 51, 51, 0.5);
     }
     #loading .spinner {
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
       border: 3px solid rgba(204, 51, 51, 0.3);
       border-top-color: #cc3333;
       border-radius: 50%;
@@ -77,29 +82,54 @@
     }
     #hud {
       position: absolute;
-      top: 16px;
-      left: 16px;
-      font-size: 14px;
+      top: 12px;
+      left: 12px;
+      font-size: 13px;
       z-index: 10;
       opacity: 0.7;
+      pointer-events: none;
     }
-    #hud .gesture-state {
-      padding: 4px 8px;
+    #hud .hud-item {
+      padding: 3px 8px;
       background: rgba(0,0,0,0.5);
       border-radius: 4px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
+      backdrop-filter: blur(4px);
+    }
+    /* Instruction overlay */
+    #instruction {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    #instruction p {
+      font-size: 16px;
+      padding: 8px 20px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 20px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(204, 51, 51, 0.3);
+      text-shadow: 0 0 8px rgba(204, 51, 51, 0.4);
     }
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <div id="app">
-    <canvas id="three-canvas"></canvas>
     <video id="camera-feed" autoplay playsinline></video>
+    <canvas id="three-canvas"></canvas>
     <canvas id="hand-overlay"></canvas>
     <div id="hud">
-      <div class="gesture-state" id="fps-display">FPS: --</div>
-      <div class="gesture-state" id="gesture-display">Gesture: None</div>
+      <div class="hud-item" id="fps-display">FPS: --</div>
+      <div class="hud-item" id="gesture-display">대기 중</div>
+    </div>
+    <div id="instruction">
+      <p>양손을 모으고 펼쳐 옥문강을 소환하세요</p>
     </div>
     <div id="loading">
       <h2>獄門疆</h2>
