@@ -1,195 +1,203 @@
 import type { HandData } from '../../tracking/tracking-types';
-import { distance2D, distance3D, type Vec3 } from '../../utils/math-utils';
+import { distance2D, type Vec3 } from '../../utils/math-utils';
 import { LANDMARK } from '../../tracking/tracking-types';
 
 export enum TwoHandState {
   IDLE = 'idle',
-  /** Hands detected but far apart */
   APART = 'apart',
-  /** Hands close together (ready to summon) */
-  CONVERGED = 'converged',
-  /** Hands spreading apart → summon */
-  SPREADING = 'spreading',
-  /** Object summoned, hands controlling it */
+  PRAYER = 'prayer',
+  SUMMONING = 'summoning',
   CONTROLLING = 'controlling',
-  /** Hands coming back together → dismiss */
-  DISMISSING = 'dismissing',
+  COMPRESS = 'compress',
+  RELEASE = 'release',
+  SEALING = 'sealing',
 }
 
 export interface TwoHandGesture {
   readonly state: TwoHandState;
-  /** Center point between both hands (normalized 0..1) */
   readonly center: Vec3;
-  /** Distance between palms (normalized) */
   readonly handDistance: number;
-  /** Rate of distance change (positive = spreading) */
   readonly spreadVelocity: number;
-  /** Twist angle between hands (radians) */
-  readonly twistAngle: number;
-  /** Rate of twist change */
-  readonly twistVelocity: number;
-  /** Scale factor based on hand distance */
   readonly scale: number;
+  readonly gestureProgress: number;
 }
 
-/** Thresholds */
-const CONVERGE_DIST = 0.12;
-const SPREAD_DIST = 0.25;
-const DISMISS_DIST = 0.10;
-const SPREAD_VELOCITY_THRESHOLD = 0.003;
-const DISMISS_VELOCITY_THRESHOLD = -0.002;
+// ── Thresholds ────────────────────────────────────────────────
+const PRAYER_DIST = 0.16;
+const PRAYER_HOLD_MS = 250;
+const SPREAD_TRIGGER_DIST = 0.18;
+const SPREAD_VEL_MIN = 0.0005;
+const SEAL_DIST = 0.11;
+const SEAL_HOLD_MS = 1500;
+const COMPRESS_DIST = 0.20;
+const COMPRESS_VEL = -0.0003;
+const RELEASE_VEL = 0.003;
+const TRACKING_GRACE_MS = 800;
 
-function palmCenter(hand: HandData): Vec3 {
-  const wrist = hand.landmarks[LANDMARK.WRIST];
-  const middleMcp = hand.landmarks[LANDMARK.MIDDLE_MCP];
+export function palmCenter(hand: HandData): Vec3 {
+  const w = hand.landmarks[LANDMARK.WRIST];
+  const m = hand.landmarks[LANDMARK.MIDDLE_MCP];
+  const i = hand.landmarks[LANDMARK.INDEX_MCP];
+  const r = hand.landmarks[LANDMARK.RING_MCP];
   return {
-    x: (wrist.x + middleMcp.x) / 2,
-    y: (wrist.y + middleMcp.y) / 2,
-    z: (wrist.z + middleMcp.z) / 2,
+    x: (w.x + m.x + i.x + r.x) / 4,
+    y: (w.y + m.y + i.y + r.y) / 4,
+    z: (w.z + m.z + i.z + r.z) / 4,
   };
 }
 
-function wristAngle(hand: HandData): number {
-  const wrist = hand.landmarks[LANDMARK.WRIST];
-  const middleMcp = hand.landmarks[LANDMARK.MIDDLE_MCP];
-  return Math.atan2(middleMcp.y - wrist.y, middleMcp.x - wrist.x);
+function ema(prev: number, next: number, alpha: number): number {
+  return alpha * next + (1 - alpha) * prev;
 }
 
 export class TwoHandDetector {
   private state = TwoHandState.IDLE;
-  private prevDistance = 0;
-  private prevTwist = 0;
-  private prevTimestamp = 0;
-  private spreadVelocity = 0;
-  private twistVelocity = 0;
-  private convergeStartTime = 0;
+  private prevDist = 0;
+  private prevTs = 0;
+  private spreadVel = 0;
   private summoned = false;
+  private lastTwoHandTs = 0;
+  private lastCenter: Vec3 = { x: 0.5, y: 0.5, z: 0 };
+  private prayerStartTs = 0;
+  private sealStartTs = 0;
+  private compressStartTs = 0;
 
-  detect(hands: readonly HandData[], timestamp: number): TwoHandGesture | null {
+  detect(hands: readonly HandData[], ts: number): TwoHandGesture | null {
     if (hands.length < 2) {
-      // Keep controlling state briefly if object is summoned (hand tracking lost momentarily)
-      if (this.summoned && this.state === TwoHandState.CONTROLLING) {
-        return {
-          state: TwoHandState.CONTROLLING,
-          center: { x: 0.5, y: 0.5, z: 0 },
-          handDistance: this.prevDistance,
-          spreadVelocity: 0,
-          twistAngle: this.prevTwist,
-          twistVelocity: 0,
-          scale: this.distanceToScale(this.prevDistance),
-        };
+      // Grace period for tracking drops
+      if (this.summoned && (ts - this.lastTwoHandTs) < TRACKING_GRACE_MS) {
+        return this.makeResult(TwoHandState.CONTROLLING, ts);
       }
-      this.state = TwoHandState.IDLE;
+      if (!this.summoned) this.state = TwoHandState.IDLE;
       return null;
     }
 
-    // Identify left and right hands
-    const leftHand = hands.find((h) => h.handedness === 'Left') ?? hands[0];
-    const rightHand = hands.find((h) => h.handedness === 'Right') ?? hands[1];
+    this.lastTwoHandTs = ts;
 
-    const leftPalm = palmCenter(leftHand);
-    const rightPalm = palmCenter(rightHand);
+    const left = hands.find((h) => h.handedness === 'Left') ?? hands[0];
+    const right = hands.find((h) => h.handedness === 'Right') ?? hands[1];
+    const lp = palmCenter(left);
+    const rp = palmCenter(right);
 
     const center: Vec3 = {
-      x: (leftPalm.x + rightPalm.x) / 2,
-      y: (leftPalm.y + rightPalm.y) / 2,
-      z: (leftPalm.z + rightPalm.z) / 2,
+      x: (lp.x + rp.x) / 2,
+      y: (lp.y + rp.y) / 2,
+      z: (lp.z + rp.z) / 2,
     };
+    this.lastCenter = center;
 
-    const dist = distance2D(leftPalm, rightPalm);
+    const dist = distance2D(lp, rp);
+    const dt = this.prevTs > 0 ? Math.max((ts - this.prevTs) / 1000, 0.001) : 0.016;
+    this.spreadVel = ema(this.spreadVel, (dist - this.prevDist) / dt, 0.3);
+    this.prevDist = dist;
+    this.prevTs = ts;
 
-    // Compute velocities
-    const dt = this.prevTimestamp > 0
-      ? Math.max((timestamp - this.prevTimestamp) / 1000, 0.001)
-      : 0.016;
-    this.spreadVelocity = (dist - this.prevDistance) / dt;
+    this.updateState(dist, ts);
+    return this.makeResult(this.state, ts);
+  }
 
-    // Twist: angle difference between wrists
-    const leftAngle = wristAngle(leftHand);
-    const rightAngle = wristAngle(rightHand);
-    const twist = leftAngle - rightAngle;
-    this.twistVelocity = (twist - this.prevTwist) / dt;
-
-    this.prevDistance = dist;
-    this.prevTwist = twist;
-    this.prevTimestamp = timestamp;
-
-    // State machine
-    this.updateState(dist, timestamp);
-
+  private makeResult(state: TwoHandState, ts: number): TwoHandGesture {
+    let gestureProgress = 0;
+    if (state === TwoHandState.SEALING && this.sealStartTs > 0) {
+      gestureProgress = Math.min(1, (ts - this.sealStartTs) / SEAL_HOLD_MS);
+    }
+    if (state === TwoHandState.COMPRESS && this.compressStartTs > 0) {
+      gestureProgress = Math.min(1, (ts - this.compressStartTs) / 800);
+    }
     return {
-      state: this.state,
-      center,
-      handDistance: dist,
-      spreadVelocity: this.spreadVelocity,
-      twistAngle: twist,
-      twistVelocity: this.twistVelocity,
-      scale: this.distanceToScale(dist),
+      state,
+      center: this.lastCenter,
+      handDistance: this.prevDist,
+      spreadVelocity: this.spreadVel,
+      scale: this.distToScale(this.prevDist),
+      gestureProgress,
     };
   }
 
-  private updateState(dist: number, timestamp: number): void {
+  private updateState(dist: number, ts: number): void {
     switch (this.state) {
       case TwoHandState.IDLE:
       case TwoHandState.APART:
-        if (dist < CONVERGE_DIST) {
-          this.state = TwoHandState.CONVERGED;
-          this.convergeStartTime = timestamp;
+        if (dist < PRAYER_DIST) {
+          this.state = TwoHandState.PRAYER;
+          this.prayerStartTs = ts;
         } else {
           this.state = TwoHandState.APART;
         }
         break;
 
-      case TwoHandState.CONVERGED:
-        if (dist > SPREAD_DIST && this.spreadVelocity > SPREAD_VELOCITY_THRESHOLD) {
-          this.state = TwoHandState.SPREADING;
-        } else if (dist > CONVERGE_DIST * 1.5) {
+      case TwoHandState.PRAYER:
+        if (dist > PRAYER_DIST * 1.8) {
           this.state = TwoHandState.APART;
+        } else if (
+          (ts - this.prayerStartTs) > PRAYER_HOLD_MS &&
+          dist > SPREAD_TRIGGER_DIST &&
+          this.spreadVel > SPREAD_VEL_MIN
+        ) {
+          this.state = TwoHandState.SUMMONING;
         }
         break;
 
-      case TwoHandState.SPREADING:
-        if (dist > SPREAD_DIST * 0.8) {
+      case TwoHandState.SUMMONING:
+        if (dist > SPREAD_TRIGGER_DIST) {
           this.state = TwoHandState.CONTROLLING;
           this.summoned = true;
         }
         break;
 
       case TwoHandState.CONTROLLING:
-        if (dist < DISMISS_DIST && this.spreadVelocity < DISMISS_VELOCITY_THRESHOLD) {
-          this.state = TwoHandState.DISMISSING;
+        if (this.spreadVel > RELEASE_VEL && dist > 0.35) {
+          this.state = TwoHandState.RELEASE;
+        } else if (dist < COMPRESS_DIST && this.spreadVel < COMPRESS_VEL) {
+          this.state = TwoHandState.COMPRESS;
+          this.compressStartTs = ts;
+        } else if (dist < SEAL_DIST && Math.abs(this.spreadVel) < 0.002) {
+          this.state = TwoHandState.SEALING;
+          this.sealStartTs = ts;
         }
         break;
 
-      case TwoHandState.DISMISSING:
-        if (dist < DISMISS_DIST * 0.8) {
+      case TwoHandState.RELEASE:
+        this.state = TwoHandState.CONTROLLING;
+        break;
+
+      case TwoHandState.COMPRESS:
+        if (dist > COMPRESS_DIST * 1.3 || this.spreadVel > 0.001) {
+          this.state = TwoHandState.CONTROLLING;
+        }
+        break;
+
+      case TwoHandState.SEALING:
+        if (dist > SEAL_DIST * 2.0) {
+          this.state = TwoHandState.CONTROLLING;
+          this.sealStartTs = 0;
+        } else if ((ts - this.sealStartTs) > SEAL_HOLD_MS && dist < SEAL_DIST) {
           this.state = TwoHandState.IDLE;
           this.summoned = false;
-        } else if (dist > SPREAD_DIST * 0.5) {
-          this.state = TwoHandState.CONTROLLING;
+          this.sealStartTs = 0;
         }
         break;
     }
   }
 
-  private distanceToScale(dist: number): number {
-    const minDist = 0.08;
-    const maxDist = 0.5;
-    const clamped = Math.max(minDist, Math.min(maxDist, dist));
-    return ((clamped - minDist) / (maxDist - minDist)) * 1.5 + 0.2;
+  private distToScale(dist: number): number {
+    const min = 0.08, max = 0.55;
+    const clamped = Math.max(min, Math.min(max, dist));
+    return ((clamped - min) / (max - min)) * 0.45 + 0.15;
   }
 
-  isSummoned(): boolean {
-    return this.summoned;
-  }
+  isSummoned(): boolean { return this.summoned; }
+  setSummoned(v: boolean): void { this.summoned = v; }
 
   reset(): void {
     this.state = TwoHandState.IDLE;
-    this.prevDistance = 0;
-    this.prevTwist = 0;
-    this.prevTimestamp = 0;
-    this.spreadVelocity = 0;
-    this.twistVelocity = 0;
+    this.prevDist = 0;
+    this.prevTs = 0;
+    this.spreadVel = 0;
     this.summoned = false;
+    this.lastTwoHandTs = 0;
+    this.prayerStartTs = 0;
+    this.sealStartTs = 0;
+    this.compressStartTs = 0;
   }
 }

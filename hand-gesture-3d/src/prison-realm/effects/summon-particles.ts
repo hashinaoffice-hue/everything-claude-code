@@ -57,15 +57,15 @@ void main() {
 
   float alpha = smoothstep(0.5, 0.1, dist) * vAlpha;
 
-  // Cursed energy color: deep red to purple
+  // Cursed energy color: cyan to blue (matching reference)
   vec3 color = mix(
-    vec3(0.8, 0.1, 0.05),   // dark red
-    vec3(0.5, 0.05, 0.3),    // purple
+    vec3(0.05, 0.4, 0.7),   // cyan
+    vec3(0.1, 0.2, 0.5),     // deep blue
     vLife
   );
 
-  // Hot core
-  color += vec3(0.3, 0.05, 0.0) * smoothstep(0.3, 0.0, dist);
+  // Bright core
+  color += vec3(0.1, 0.3, 0.4) * smoothstep(0.3, 0.0, dist);
 
   gl_FragColor = vec4(color, alpha);
 }

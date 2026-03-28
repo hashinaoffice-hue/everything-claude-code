@@ -16,29 +16,101 @@ void main() {
 }
 `;
 
-/** Face orientations for placing eyes on each face of the cube */
-const FACE_CONFIGS: Array<{
-  position: [number, number, number];
+/**
+ * Dice-like eye placement matching the reference image.
+ * Eyes are large — each eye takes up ~30-40% of face width.
+ *
+ * Reference proportions:
+ *   - Single eye face: eye is ~50% of face width
+ *   - Multi-eye face: eyes are ~25-30% each, well-spaced
+ */
+
+interface FaceConfig {
+  normal: [number, number, number];
   rotation: [number, number, number];
-}> = [
-  { position: [0, 0, 0.501], rotation: [0, 0, 0] },
-  { position: [0, 0, -0.501], rotation: [0, Math.PI, 0] },
-  { position: [0.501, 0, 0], rotation: [0, Math.PI / 2, 0] },
-  { position: [-0.501, 0, 0], rotation: [0, -Math.PI / 2, 0] },
-  { position: [0, 0.501, 0], rotation: [-Math.PI / 2, 0, 0] },
-  { position: [0, -0.501, 0], rotation: [Math.PI / 2, 0, 0] },
+  eyePositions: Array<[number, number]>;
+}
+
+const FACE_OFFSET = 0.501;
+
+const FACE_CONFIGS: FaceConfig[] = [
+  // Front (z+): 1 eye — large, centered
+  {
+    normal: [0, 0, 1],
+    rotation: [0, 0, 0],
+    eyePositions: [[0, 0]],
+  },
+  // Back (z-): 6 eyes — 2 columns of 3
+  {
+    normal: [0, 0, -1],
+    rotation: [0, Math.PI, 0],
+    eyePositions: [
+      [-0.2, 0.28], [0.2, 0.28],
+      [-0.2, 0],    [0.2, 0],
+      [-0.2, -0.28],[0.2, -0.28],
+    ],
+  },
+  // Right (x+): 3 eyes — diagonal
+  {
+    normal: [1, 0, 0],
+    rotation: [0, Math.PI / 2, 0],
+    eyePositions: [
+      [-0.22, 0.22],
+      [0, 0],
+      [0.22, -0.22],
+    ],
+  },
+  // Left (x-): 4 eyes — corners
+  {
+    normal: [-1, 0, 0],
+    rotation: [0, -Math.PI / 2, 0],
+    eyePositions: [
+      [-0.2, 0.2], [0.2, 0.2],
+      [-0.2, -0.2],[0.2, -0.2],
+    ],
+  },
+  // Top (y+): 5 eyes — X pattern
+  {
+    normal: [0, 1, 0],
+    rotation: [-Math.PI / 2, 0, 0],
+    eyePositions: [
+      [0, 0],
+      [-0.22, 0.22], [0.22, 0.22],
+      [-0.22, -0.22],[0.22, -0.22],
+    ],
+  },
+  // Bottom (y-): 2 eyes — diagonal
+  {
+    normal: [0, -1, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    eyePositions: [
+      [-0.17, 0.17],
+      [0.17, -0.17],
+    ],
+  },
 ];
 
-const BLINK_OFFSETS = [0, 2.1, 4.2, 1.05, 3.15, 5.25];
+/** Eye sizes matching reference — large relative to cube face */
+function eyeScale(eyeCount: number): number {
+  switch (eyeCount) {
+    case 1: return 0.55;   // single eye: very large, ~55% of face
+    case 2: return 0.38;
+    case 3: return 0.32;
+    case 4: return 0.30;
+    case 5: return 0.27;
+    case 6: return 0.24;
+    default: return 0.28;
+  }
+}
 
-/** Distinct iris colors for each eye */
+/** Cyan/blue iris colors matching reference */
 const IRIS_COLORS: THREE.Vector3[] = [
-  new THREE.Vector3(0.55, 0.05, 0.15),  // deep crimson
-  new THREE.Vector3(0.45, 0.03, 0.25),  // purple-red
-  new THREE.Vector3(0.60, 0.08, 0.10),  // bright crimson
-  new THREE.Vector3(0.40, 0.05, 0.20),  // dark purple
-  new THREE.Vector3(0.50, 0.10, 0.12),  // blood red
-  new THREE.Vector3(0.48, 0.02, 0.22),  // violet
+  new THREE.Vector3(0.1, 0.55, 0.75),
+  new THREE.Vector3(0.05, 0.45, 0.70),
+  new THREE.Vector3(0.15, 0.60, 0.80),
+  new THREE.Vector3(0.08, 0.50, 0.65),
+  new THREE.Vector3(0.12, 0.58, 0.72),
+  new THREE.Vector3(0.06, 0.42, 0.68),
 ];
 
 export class SealedForm {
@@ -61,18 +133,53 @@ export class SealedForm {
     const cube = new THREE.Mesh(cubeGeometry, this.cubeMaterial);
     this.group.add(cube);
 
-    for (let i = 0; i < 6; i++) {
-      const config = FACE_CONFIGS[i];
-      const eye = new Eye({
-        blinkOffset: BLINK_OFFSETS[i],
-        irisColor: IRIS_COLORS[i],
-      });
+    let eyeIndex = 0;
+    for (const face of FACE_CONFIGS) {
+      const count = face.eyePositions.length;
+      const s = eyeScale(count);
 
-      eye.mesh.position.set(...config.position);
-      eye.mesh.rotation.set(...config.rotation);
+      for (const [lx, ly] of face.eyePositions) {
+        const colorIdx = eyeIndex % IRIS_COLORS.length;
+        const eye = new Eye({
+          blinkOffset: eyeIndex * 1.3 + Math.random() * 0.5,
+          irisColor: IRIS_COLORS[colorIdx],
+        });
 
-      this.group.add(eye.mesh);
-      this.eyes.push(eye);
+        eye.mesh.scale.set(s, s, 1);
+
+        // Position on face surface
+        const pos = new THREE.Vector3();
+
+        if (face.normal[2] !== 0) {
+          // z-axis faces
+          pos.set(
+            lx * (face.normal[2] > 0 ? -1 : 1),
+            ly,
+            face.normal[2] * FACE_OFFSET,
+          );
+        } else if (face.normal[0] !== 0) {
+          // x-axis faces
+          pos.set(
+            face.normal[0] * FACE_OFFSET,
+            ly,
+            lx * (face.normal[0] > 0 ? -1 : 1),
+          );
+        } else {
+          // y-axis faces
+          pos.set(
+            lx,
+            face.normal[1] * FACE_OFFSET,
+            ly * (face.normal[1] > 0 ? -1 : 1),
+          );
+        }
+
+        eye.mesh.position.copy(pos);
+        eye.mesh.rotation.set(...face.rotation);
+
+        this.group.add(eye.mesh);
+        this.eyes.push(eye);
+        eyeIndex++;
+      }
     }
   }
 

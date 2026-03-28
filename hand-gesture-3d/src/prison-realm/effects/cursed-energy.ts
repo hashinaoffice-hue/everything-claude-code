@@ -51,10 +51,10 @@ void main() {
 
   float alpha = smoothstep(0.5, 0.0, dist) * vAlpha;
 
-  // Cursed energy: alternating red-black
+  // Cursed energy: alternating cyan-dark blue
   vec3 color = mix(
-    vec3(0.7, 0.05, 0.02),
-    vec3(0.15, 0.0, 0.0),
+    vec3(0.05, 0.45, 0.7),
+    vec3(0.02, 0.1, 0.25),
     sin(vAngle * 10.0) * 0.5 + 0.5
   );
 
