@@ -52,13 +52,23 @@ export class PrisonRealm {
   }
 
   summon(): void {
-    if (this.state === PrisonRealmState.HIDDEN) {
+    if (this.state === PrisonRealmState.HIDDEN || this.state === PrisonRealmState.DISMISSING) {
       this.state = PrisonRealmState.SUMMONING;
+      this.summonProgress = 0;
       this.targetProgress = 1;
       this.group.visible = true;
       this.group.scale.set(0.01, 0.01, 0.01);
+      // Full state reset for clean re-summon
       this.sealProgress = 0;
+      this.scaleMultiplier = 1;
+      this.targetScaleMultiplier = 1;
+      this.shakeIntensity = 0;
+      this.targetShakeIntensity = 0;
+      this.energyBurst = 0;
+      this.rotationSpeed = 0;
+      this.targetRotationSpeed = 0;
       this.floatPhase = 0;
+      this.sealedForm.group.scale.setScalar(0.01);
     }
   }
 

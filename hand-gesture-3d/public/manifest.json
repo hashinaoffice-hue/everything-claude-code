@@ -1,0 +1,25 @@
+{
+  "name": "옥문강 - Prison Realm",
+  "short_name": "옥문강",
+  "description": "AR 손동작으로 주술회전의 옥문강을 소환하고 제어하세요",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#0088cc",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "games"]
+}
