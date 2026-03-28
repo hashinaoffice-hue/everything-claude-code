@@ -3,9 +3,12 @@ import glsl from 'vite-plugin-glsl';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { resolve } from 'path';
 
+const noSsl = process.env.VITE_NO_SSL === '1';
+const isProd = process.env.NODE_ENV === 'production';
+
 export default defineConfig({
-  base: '/everything-claude-code/hand-gesture-3d/',
-  plugins: [glsl(), basicSsl()],
+  base: isProd ? '/everything-claude-code/hand-gesture-3d/' : '/',
+  plugins: [glsl(), ...(noSsl ? [] : [basicSsl()])],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -13,6 +16,6 @@ export default defineConfig({
   },
   server: {
     host: true,
-    https: {},
+    ...(noSsl ? {} : { https: {} }),
   },
 });
