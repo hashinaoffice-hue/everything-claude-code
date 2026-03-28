@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0f"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="cube" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a32"/>
+      <stop offset="100%" style="stop-color:#1e1e26"/>
+    </linearGradient>
+    <radialGradient id="eye-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00ccff;stop-opacity:0.8"/>
+      <stop offset="60%" style="stop-color:#0066aa;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#003366;stop-opacity:0"/>
+    </radialGradient>
+    <radialGradient id="iris" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#000"/>
+      <stop offset="30%" style="stop-color:#003355"/>
+      <stop offset="60%" style="stop-color:#0088cc"/>
+      <stop offset="80%" style="stop-color:#00aaee"/>
+      <stop offset="100%" style="stop-color:#006699"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Outer glow -->
+  <circle cx="256" cy="240" r="180" fill="url(#eye-glow)" opacity="0.4"/>
+  <!-- Cube - isometric view -->
+  <!-- Top face -->
+  <polygon points="256,100 376,165 256,230 136,165" fill="#32323c" stroke="#444450" stroke-width="1.5"/>
+  <!-- Left face -->
+  <polygon points="136,165 256,230 256,360 136,295" fill="#24242c" stroke="#444450" stroke-width="1.5"/>
+  <!-- Right face -->
+  <polygon points="376,165 256,230 256,360 376,295" fill="#1e1e26" stroke="#444450" stroke-width="1.5"/>
+  <!-- Edge highlights -->
+  <line x1="256" y1="100" x2="256" y2="230" stroke="#555560" stroke-width="0.5" opacity="0.5"/>
+  <line x1="136" y1="165" x2="256" y2="230" stroke="#555560" stroke-width="0.5" opacity="0.3"/>
+  <!-- Front eye (right face) -->
+  <ellipse cx="306" cy="275" rx="36" ry="22" fill="#0a0a10" stroke="#334455" stroke-width="1"/>
+  <ellipse cx="306" cy="275" rx="18" ry="18" fill="url(#iris)"/>
+  <circle cx="306" cy="275" r="7" fill="#000"/>
+  <circle cx="312" cy="270" r="3" fill="rgba(255,255,255,0.7)"/>
+  <!-- Left face eye -->
+  <ellipse cx="196" cy="255" rx="32" ry="20" fill="#0a0a10" stroke="#334455" stroke-width="1"/>
+  <ellipse cx="196" cy="255" rx="16" ry="16" fill="url(#iris)"/>
+  <circle cx="196" cy="255" r="6" fill="#000"/>
+  <circle cx="201" cy="251" r="2.5" fill="rgba(255,255,255,0.7)"/>
+  <!-- Top face small eyes -->
+  <ellipse cx="236" cy="155" rx="18" ry="12" fill="#0a0a10" stroke="#334455" stroke-width="0.8"/>
+  <ellipse cx="236" cy="155" rx="10" ry="10" fill="url(#iris)"/>
+  <circle cx="236" cy="155" r="4" fill="#000"/>
+  <ellipse cx="280" cy="170" rx="18" ry="12" fill="#0a0a10" stroke="#334455" stroke-width="0.8"/>
+  <ellipse cx="280" cy="170" rx="10" ry="10" fill="url(#iris)"/>
+  <circle cx="280" cy="170" r="4" fill="#000"/>
+  <!-- Cursed energy particles -->
+  <circle cx="140" cy="120" r="3" fill="#00aaff" opacity="0.6"/>
+  <circle cx="380" cy="130" r="2" fill="#0088cc" opacity="0.5"/>
+  <circle cx="120" cy="280" r="2.5" fill="#00ccff" opacity="0.4"/>
+  <circle cx="400" cy="300" r="2" fill="#0099dd" opacity="0.5"/>
+  <circle cx="256" cy="80" r="2" fill="#00bbee" opacity="0.4"/>
+  <circle cx="350" cy="370" r="1.5" fill="#00aaff" opacity="0.3"/>
+  <!-- Title text -->
+  <text x="256" y="430" text-anchor="middle" font-family="serif" font-size="42" font-weight="bold" fill="#0099cc" opacity="0.9">獄門疆</text>
+</svg>

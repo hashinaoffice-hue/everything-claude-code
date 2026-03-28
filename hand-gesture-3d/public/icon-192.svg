@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <radialGradient id="ig" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#000"/>
+      <stop offset="30%" style="stop-color:#003355"/>
+      <stop offset="60%" style="stop-color:#0088cc"/>
+      <stop offset="100%" style="stop-color:#006699"/>
+    </radialGradient>
+  </defs>
+  <rect width="192" height="192" rx="36" fill="#0a0a14"/>
+  <!-- Cube -->
+  <polygon points="96,32 148,60 96,88 44,60" fill="#32323c" stroke="#444450" stroke-width="1"/>
+  <polygon points="44,60 96,88 96,136 44,108" fill="#24242c" stroke="#444450" stroke-width="1"/>
+  <polygon points="148,60 96,88 96,136 148,108" fill="#1e1e26" stroke="#444450" stroke-width="1"/>
+  <!-- Main eye -->
+  <ellipse cx="118" cy="104" rx="16" ry="10" fill="#0a0a10"/>
+  <ellipse cx="118" cy="104" rx="8" ry="8" fill="url(#ig)"/>
+  <circle cx="118" cy="104" r="3" fill="#000"/>
+  <circle cx="120" cy="102" r="1.5" fill="rgba(255,255,255,0.7)"/>
+  <!-- Left eye -->
+  <ellipse cx="72" cy="94" rx="13" ry="8" fill="#0a0a10"/>
+  <ellipse cx="72" cy="94" rx="7" ry="7" fill="url(#ig)"/>
+  <circle cx="72" cy="94" r="2.5" fill="#000"/>
+  <!-- Text -->
+  <text x="96" y="168" text-anchor="middle" font-family="serif" font-size="18" font-weight="bold" fill="#0099cc" opacity="0.9">獄門疆</text>
+</svg>
